@@ -1,0 +1,1 @@
+bash -c "gcc -O2 -Wno-deprecated-declarations $(pkg-config --cflags gtk+-3.0) -o lgo_gui.exe LGO_GUI.c $(pkg-config --libs gtk+-3.0) -lm -mwindows"

@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LGO Analysis Tool — Locally Geostationary Orbits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:    #0B1120;
+      --dark:    #111827;
+      --panel:   #161E2E;
+      --border:  #1E2D45;
+      --cyan:    #38BDF8;
+      --orange:  #FB923C;
+      --green:   #4ADE80;
+      --purple:  #A78BFA;
+      --muted:   #94A3B8;
+      --text:    #CBD5E1;
+      --bright:  #F0F6FF;
+      --font-display: 'Space Grotesk', sans-serif;
+      --font-body:    'Inter', sans-serif;
+      --font-mono:    'JetBrains Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--navy);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2.5rem;
+      height: 60px;
+      background: rgba(11,17,32,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 0.9rem;
+      letter-spacing: 0.08em;
+      color: var(--cyan);
+      text-transform: uppercase;
+    }
+    .nav-links { display: flex; gap: 2rem; list-style: none; }
+    .nav-links a {
+      font-size: 0.82rem;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--bright); }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      padding: 0 4rem;
+      gap: 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 60% 50% at 70% 50%, rgba(56,189,248,0.06) 0%, transparent 70%),
+                  radial-gradient(ellipse 40% 60% at 20% 80%, rgba(167,139,250,0.04) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .hero-text { padding-top: 4rem; }
+    .hero-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.18em;
+      color: var(--cyan);
+      text-transform: uppercase;
+      margin-bottom: 1.2rem;
+    }
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2.4rem, 4vw, 3.6rem);
+      font-weight: 700;
+      line-height: 1.1;
+      color: var(--bright);
+      margin-bottom: 1.4rem;
+      letter-spacing: -0.02em;
+    }
+    h1 .accent { color: var(--cyan); }
+    .hero-sub {
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 480px;
+      line-height: 1.75;
+      margin-bottom: 2.2rem;
+    }
+    .hero-buttons { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.65rem 1.4rem;
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      border-radius: 6px;
+      text-decoration: none;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-primary {
+      background: var(--cyan);
+      color: var(--navy);
+    }
+    .btn-primary:hover { background: #7DD3FC; transform: translateY(-1px); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { border-color: var(--cyan); color: var(--cyan); }
+
+    /* ── ORBIT SVG HERO ── */
+    .hero-visual {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-top: 4rem;
+    }
+    .orbit-svg { width: 100%; max-width: 520px; }
+
+    /* ── SECTION SHARED ── */
+    section {
+      padding: 6rem 4rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .section-label {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.2em;
+      color: var(--cyan);
+      text-transform: uppercase;
+      margin-bottom: 0.8rem;
+    }
+    h2 {
+      font-family: var(--font-display);
+      font-size: clamp(1.6rem, 2.5vw, 2.4rem);
+      font-weight: 600;
+      color: var(--bright);
+      margin-bottom: 0.75rem;
+      letter-spacing: -0.015em;
+    }
+    .section-intro {
+      color: var(--muted);
+      max-width: 620px;
+      margin-bottom: 3rem;
+      font-size: 1rem;
+    }
+
+    /* ── PHYSICS CARDS ── */
+    .physics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .physics-card {
+      background: var(--panel);
+      padding: 2rem 1.75rem;
+    }
+    .physics-card:hover { background: #1a2540; }
+    .physics-icon {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+    .physics-card h3 {
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--bright);
+      margin-bottom: 0.6rem;
+    }
+    .physics-card p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+    .tag {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 4px;
+      margin-top: 0.8rem;
+    }
+    .tag-cyan  { background: rgba(56,189,248,0.12);  color: var(--cyan);   }
+    .tag-orange{ background: rgba(251,146,60,0.12);  color: var(--orange); }
+    .tag-green { background: rgba(74,222,128,0.12);  color: var(--green);  }
+    .tag-purple{ background: rgba(167,139,250,0.12); color: var(--purple); }
+
+    /* ── FORMULA BLOCK ── */
+    .formula-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+    .formula-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.5rem 1.75rem;
+    }
+    .formula-card h4 {
+      font-family: var(--font-display);
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 0.8rem;
+    }
+    .formula {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--orange);
+      background: rgba(0,0,0,0.25);
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      border-left: 2px solid var(--orange);
+      line-height: 1.8;
+    }
+    .formula .var { color: var(--cyan); }
+    .formula .comment { color: #4B5563; font-size: 0.75rem; }
+
+    /* ── TIMELINE ── */
+    .timeline { position: relative; padding-left: 2rem; }
+    .timeline::before {
+      content: '';
+      position: absolute; left: 0; top: 0; bottom: 0;
+      width: 1px;
+      background: linear-gradient(to bottom, var(--cyan), var(--purple), transparent);
+    }
+    .timeline-item {
+      position: relative;
+      padding: 0 0 3rem 2.5rem;
+    }
+    .timeline-item:last-child { padding-bottom: 0; }
+    .timeline-dot {
+      position: absolute;
+      left: -0.45rem; top: 0.35rem;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      border: 2px solid var(--navy);
+    }
+    .dot-matlab  { background: #EDB120; }
+    .dot-c       { background: var(--cyan); }
+    .dot-newton  { background: var(--green); }
+    .dot-gui     { background: var(--purple); }
+
+    .timeline-phase {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 0.3rem;
+    }
+    .timeline-item h3 {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--bright);
+      margin-bottom: 0.5rem;
+    }
+    .timeline-item p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      max-width: 500px;
+      line-height: 1.7;
+    }
+    .timeline-detail {
+      margin-top: 1rem;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--text);
+      line-height: 1.9;
+      max-width: 520px;
+    }
+    .timeline-detail .kw { color: var(--cyan); }
+    .timeline-detail .num { color: var(--orange); }
+    .timeline-detail .cmt { color: #374151; }
+
+    /* ── RESULTS TABLE ── */
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 2.5rem;
+    }
+    .result-cell {
+      background: var(--panel);
+      padding: 1.75rem 1.5rem;
+      text-align: center;
+    }
+    .result-cell.header {
+      background: #0f1929;
+      padding: 1rem 1.5rem;
+    }
+    .result-cell.header span {
+      font-family: var(--font-display);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .result-label {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+    .result-value {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--bright);
+      line-height: 1;
+      margin-bottom: 0.3rem;
+    }
+    .result-unit {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+    .result-improvement {
+      display: inline-block;
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--green);
+      background: rgba(74,222,128,0.1);
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      margin-top: 0.4rem;
+    }
+
+    .orbit-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.84rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .orbit-table thead th {
+      background: #0f1929;
+      font-family: var(--font-display);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0.85rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .orbit-table tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .orbit-table tbody tr:last-child { border-bottom: none; }
+    .orbit-table tbody tr:hover { background: rgba(56,189,248,0.04); }
+    .orbit-table td {
+      padding: 0.9rem 1rem;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+    }
+    .orbit-table td:first-child {
+      font-family: var(--font-display);
+      font-weight: 500;
+      color: var(--bright);
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.68rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 3px;
+      font-family: var(--font-mono);
+    }
+    .badge-lgo { background: rgba(56,189,248,0.15); color: var(--cyan); }
+
+    /* ── BUILD SECTION ── */
+    .build-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    .build-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .build-card-header {
+      padding: 1rem 1.25rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .build-card-header span {
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--bright);
+    }
+    .os-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    pre {
+      padding: 1.25rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      line-height: 1.85;
+      color: var(--text);
+      overflow-x: auto;
+      margin: 0;
+    }
+    pre .cmd { color: var(--green); }
+    pre .flag { color: var(--orange); }
+    pre .pkg { color: var(--cyan); }
+    pre .comment { color: #374151; }
+
+    /* ── FILES SECTION ── */
+    .files-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .file-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      transition: border-color 0.2s;
+    }
+    .file-item:hover { border-color: rgba(56,189,248,0.3); }
+    .file-icon {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      white-space: nowrap;
+      margin-top: 0.1rem;
+    }
+    .file-item h4 {
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: var(--cyan);
+      margin-bottom: 0.25rem;
+    }
+    .file-item p {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    /* ── CITATION ── */
+    .citation-block {
+      background: var(--panel);
+      border-left: 2px solid var(--purple);
+      border-radius: 0 8px 8px 0;
+      padding: 1.25rem 1.5rem;
+      margin-top: 1.5rem;
+    }
+    .citation-block p {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .citation-block a { color: var(--purple); text-decoration: none; }
+    .citation-block a:hover { text-decoration: underline; }
+    .citation-num {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--purple);
+      margin-bottom: 0.4rem;
+      display: block;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem 4rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    footer p {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    footer a { color: var(--cyan); text-decoration: none; }
+
+    /* ── DIVIDER ── */
+    .full-bleed-divider {
+      width: 100%;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      nav { padding: 0 1.5rem; }
+      .nav-links { display: none; }
+      .hero { grid-template-columns: 1fr; padding: 5rem 1.5rem 3rem; }
+      .hero-visual { order: -1; }
+      section { padding: 4rem 1.5rem; }
+      .physics-grid { grid-template-columns: 1fr; }
+      .formula-row { grid-template-columns: 1fr; }
+      .results-grid { grid-template-columns: 1fr 1fr; }
+      .build-grid { grid-template-columns: 1fr; }
+      footer { padding: 2rem 1.5rem; flex-direction: column; text-align: center; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">LGO · Analysis Tool</div>
+  <ul class="nav-links">
+    <li><a href="#physics">Physics</a></li>
+    <li><a href="#development">Development</a></li>
+    <li><a href="#results">Results</a></li>
+    <li><a href="#build">Build</a></li>
+    <li><a href="#files">Files</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-text">
+    <p class="hero-eyebrow">// Orbital Mechanics</p>
+    <h1>Locally<br /><span class="accent">Geostationary</span><br />Orbit Design</h1>
+    <p class="hero-sub">
+      A tool for computing and analysing LGO families — elliptic orbits whose apogee velocity matches Earth's surface rotation at a given latitude, maximising satellite dwell time over a target region.
+    </p>
+    <div class="hero-buttons">
+      <a href="#build" class="btn btn-primary">↓ Build the tool</a>
+      <a href="#results" class="btn btn-ghost">View results</a>
+    </div>
+  </div>
+
+  <div class="hero-visual">
+    <!--
+      Orbit geometry (SVG coords):
+        Ellipse semi-major a=200, semi-minor b=130, centre cx=230, cy=220
+        Earth (focus) at cx + c where c=sqrt(a²-b²)=sqrt(40000-16900)=sqrt(23100)≈152
+        Focus at x=230+152=382? No — we want apogee RIGHT and perigee visible near Earth on the LEFT.
+        Place focus (Earth) at x=160, y=220.
+        Apogee (rightmost vertex) at x=160+a_right. With cx=230:
+          right vertex = cx+a = 230+200=430  → r_A = 430-160 = 270 px
+          left  vertex = cx-a = 230-200= 30  → r_P =  160-30 = 130 px   (visible, left side)
+        c = cx - Fx = 230-160 = 70  →  b=sqrt(a²-c²)=sqrt(40000-4900)=sqrt(35100)≈187
+        Use a=200, b=130 (more eccentric, visually clearer), c=sqrt(200²-130²)=sqrt(23100)≈152
+        So Fx = cx - c = 230-152 = 78  (Earth focus x)
+        Right vertex (apogee):  x=430, y=220   r_A = 430-78 = 352 px (large)
+        Left  vertex (perigee): x= 30, y=220   r_P =  78-30 =  48 px (small, close to Earth)
+        → Earth circle radius ~28px, centred at (78,220), fits nicely between left edge and centre.
+
+      animateMotion path: full ellipse starting at apogee (430,220),
+        going counter-clockwise (sweep-flag=0 in SVG = counter-clockwise in screen coords,
+        but SVG y-axis is down so sweep=0 is clockwise visually in space — 
+        we use two 180° arcs to trace the full ellipse):
+          M 430 220  A 200 130 0 0 0  30 220  A 200 130 0 0 0  430 220
+        The dot starts at apogee and travels the orbit.
+        Kepler: satellite moves SLOW near apogee, FAST near perigee.
+        We achieve this via calcMode=spline with appropriate keySplines.
+    -->
+    <svg class="orbit-svg" viewBox="0 0 500 440" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="earthGrad" cx="50%" cy="40%" r="55%">
+          <stop offset="0%"   stop-color="#2563EB"/>
+          <stop offset="40%"  stop-color="#1D4ED8"/>
+          <stop offset="100%" stop-color="#0C1A3A"/>
+        </radialGradient>
+        <radialGradient id="glowGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.18"/>
+          <stop offset="100%" stop-color="#38BDF8" stop-opacity="0"/>
+        </radialGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="softglow">
+          <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- Background stars -->
+      <g opacity="0.5">
+        <circle cx="30"  cy="40"  r="1"   fill="white" opacity="0.6"/>
+        <circle cx="80"  cy="15"  r="0.8" fill="white" opacity="0.4"/>
+        <circle cx="150" cy="55"  r="1.2" fill="white" opacity="0.5"/>
+        <circle cx="420" cy="25"  r="0.9" fill="white" opacity="0.6"/>
+        <circle cx="470" cy="70"  r="1"   fill="white" opacity="0.4"/>
+        <circle cx="15"  cy="200" r="0.8" fill="white" opacity="0.5"/>
+        <circle cx="490" cy="200" r="1"   fill="white" opacity="0.4"/>
+        <circle cx="60"  cy="380" r="0.9" fill="white" opacity="0.5"/>
+        <circle cx="200" cy="420" r="1.1" fill="white" opacity="0.4"/>
+        <circle cx="380" cy="410" r="0.8" fill="white" opacity="0.6"/>
+        <circle cx="450" cy="360" r="1"   fill="white" opacity="0.5"/>
+        <circle cx="100" cy="340" r="0.7" fill="white" opacity="0.4"/>
+        <circle cx="320" cy="30"  r="0.9" fill="white" opacity="0.5"/>
+        <circle cx="260" cy="12"  r="0.7" fill="white" opacity="0.4"/>
+        <circle cx="490" cy="330" r="0.8" fill="white" opacity="0.4"/>
+        <circle cx="10"  cy="120" r="0.9" fill="white" opacity="0.5"/>
+      </g>
+
+      <!--
+        Ellipse: cx=230, cy=220, rx=200, ry=130
+        Earth focus: (78, 220)
+        Apogee vertex: (430, 220)  — right side, far from Earth
+        Perigee vertex: (30, 220)  — left side, close to Earth
+      -->
+
+      <!-- Orbit glow halo -->
+      <ellipse cx="230" cy="220" rx="200" ry="130" fill="none"
+               stroke="#38BDF8" stroke-width="16" opacity="0.04"/>
+
+      <!-- Main orbit ellipse -->
+      <ellipse cx="230" cy="220" rx="200" ry="130" fill="none"
+               stroke="#1E3A5F" stroke-width="1.5"/>
+
+      <!-- Dwell arc highlight near apogee (right side) — short arc around x=430 -->
+      <!-- Apogee arc: stroke-dasharray highlights ~70px of the 1042px total circumference -->
+      <ellipse cx="230" cy="220" rx="200" ry="130" fill="none"
+               stroke="#38BDF8" stroke-width="2.5"
+               stroke-dasharray="80 9999"
+               stroke-dashoffset="-480"
+               filter="url(#glow)" opacity="0.9">
+        <animate attributeName="opacity" values="0.7;1;0.7" dur="3s" repeatCount="indefinite"/>
+      </ellipse>
+
+      <!-- Earth glow (focus at 78,220) -->
+      <circle cx="78" cy="220" r="48" fill="url(#glowGrad)"/>
+
+      <!-- Earth body -->
+      <circle cx="78" cy="220" r="28" fill="url(#earthGrad)"/>
+      <!-- Continent suggestion -->
+      <ellipse cx="71"  cy="213" rx="9"  ry="6"  fill="#22C55E" opacity="0.35" transform="rotate(-20,71,213)"/>
+      <ellipse cx="84"  cy="227" rx="6"  ry="4"  fill="#22C55E" opacity="0.30" transform="rotate(10,84,227)"/>
+      <ellipse cx="70"  cy="229" rx="5"  ry="3.5" fill="#22C55E" opacity="0.25"/>
+
+      <!-- Focus dot (Earth centre) -->
+      <circle cx="78" cy="220" r="3" fill="#38BDF8" opacity="0.6"/>
+
+      <!-- Perigee marker (left vertex at x=30, y=220) -->
+      <circle cx="30" cy="220" r="5" fill="none" stroke="#94A3B8" stroke-width="1.5" opacity="0.6"/>
+      <line x1="30" y1="214" x2="30" y2="200" stroke="#94A3B8" stroke-width="1" opacity="0.5"/>
+      <text x="35" y="198" font-family="JetBrains Mono, monospace" font-size="9"
+            fill="#94A3B8" opacity="0.65">perigee</text>
+
+      <!-- rP annotation (Earth to perigee) -->
+      <line x1="78" y1="220" x2="30" y2="220" stroke="#94A3B8" stroke-width="0.8"
+            stroke-dasharray="3 3" opacity="0.25"/>
+      <text x="52" y="235" font-family="JetBrains Mono, monospace" font-size="8"
+            fill="#94A3B8" opacity="0.4" text-anchor="middle">r_P</text>
+
+      <!-- Apogee marker (right vertex at x=430, y=220) -->
+      <circle cx="430" cy="220" r="5" fill="none" stroke="#FB923C" stroke-width="1.5" opacity="0.85"/>
+      <line x1="430" y1="214" x2="430" y2="198" stroke="#FB923C" stroke-width="1" opacity="0.6"/>
+      <text x="410" y="196" font-family="JetBrains Mono, monospace" font-size="9"
+            fill="#FB923C" opacity="0.85">apogee</text>
+
+      <!-- rA annotation (Earth to apogee) -->
+      <line x1="78" y1="220" x2="430" y2="220" stroke="#38BDF8" stroke-width="0.8"
+            stroke-dasharray="4 3" opacity="0.25"/>
+      <text x="254" y="212" font-family="JetBrains Mono, monospace" font-size="9"
+            fill="#38BDF8" opacity="0.45" text-anchor="middle">r_A</text>
+
+      <!-- V_A label near apogee -->
+      <text x="440" y="248" font-family="JetBrains Mono, monospace" font-size="9"
+            fill="#38BDF8" opacity="0.75">V_A</text>
+
+      <!-- Dwell time brace near apogee -->
+      <path d="M 418 192 Q 448 178 438 220 Q 448 262 418 248"
+            fill="none" stroke="#38BDF8" stroke-width="1" opacity="0.4"/>
+      <text x="458" y="224" font-family="JetBrains Mono, monospace" font-size="9"
+            fill="#38BDF8" opacity="0.55" text-anchor="middle">Δt</text>
+
+      <!-- ω arc label (argument of perigee, angle at focus from reference) -->
+      <path d="M 110 220 A 32 32 0 0 1 90 192" fill="none" stroke="#A78BFA"
+            stroke-width="1" opacity="0.5"/>
+      <text x="114" y="200" font-family="JetBrains Mono, monospace" font-size="9"
+            fill="#A78BFA" opacity="0.65">ω</text>
+
+      <!-- inclination arc suggestion (bottom of ellipse) -->
+      <path d="M 220 350 A 50 50 0 0 1 270 350" fill="none"
+            stroke="#4ADE80" stroke-width="1" opacity="0.4" stroke-dasharray="3 2"/>
+      <text x="232" y="368" font-family="JetBrains Mono, monospace" font-size="9"
+            fill="#4ADE80" opacity="0.5">i</text>
+
+      <!-- m/n label top-left -->
+      <text x="80" y="90" font-family="JetBrains Mono, monospace" font-size="10"
+            fill="#94A3B8" opacity="0.55">m/n repetition</text>
+
+      <!-- Satellite dot — JS Kepler-driven, id referenced by script below -->
+      <circle id="keplerDot" r="5" fill="#38BDF8" filter="url(#softglow)" cx="430" cy="220"/>
+    </svg>
+  </div>
+</div>
+
+<div class="full-bleed-divider"></div>
+
+<!-- PHYSICS -->
+<section id="physics">
+  <p class="section-label">// 01 — Orbital Mechanics</p>
+  <h2>The LGO Concept</h2>
+  <p class="section-intro">
+    An LGO is an elliptic orbit whose apogee velocity exactly matches the velocity of a point on Earth's surface at a given latitude — making the satellite appear nearly stationary from that region during its apogee passage.
+  </p>
+
+  <div class="physics-grid">
+    <div class="physics-card">
+      <span class="physics-icon">🛰️</span>
+      <h3>Special Case (φ = i)</h3>
+      <p>When the sub-satellite latitude at apogee equals the inclination, the argument of perigee is fixed at ω = 90° or 270°. Classic Tundra and Molniya-family orbits fall into this category.</p>
+      <span class="tag tag-cyan">φ = i</span>
+    </div>
+    <div class="physics-card">
+      <span class="physics-icon">🌐</span>
+      <h3>General Case (φ ≠ i)</h3>
+      <p>When |φ| &lt; |i|, a broader family is unlocked. The argument of perigee ω is computed from formula (23) of Razoumny [2018], completing the orbital elements {a, e, i, ω} for the orbit propagator.</p>
+      <span class="tag tag-orange">φ ≠ i, |φ| &lt; |i|</span>
+    </div>
+    <div class="physics-card">
+      <span class="physics-icon">🔁</span>
+      <h3>Repetition Factor m/n</h3>
+      <p>The ratio m/n (m nodal revolutions in n efficient astronomical days) parameterises the ground-track repeat cycle. J2 nodal precession is included in the computation via the K correction factor.</p>
+      <span class="tag tag-green">J2 corrected</span>
+    </div>
+    <div class="physics-card">
+      <span class="physics-icon">⏱️</span>
+      <h3>Apogee Dwell Time</h3>
+      <p>The key performance metric is Δt — time spent within the true anomaly window θ ∈ [170°, 190°]. LGO variants improve dwell time by 33–35% over classical Tundra and Raindrop baselines.</p>
+      <span class="tag tag-purple">Kepler's eq.</span>
+    </div>
+    <div class="physics-card">
+      <span class="physics-icon">📡</span>
+      <h3>Orbit Propagation</h3>
+      <p>Output orbital elements {a, e, i, ω} feed the R2BP Orbit Propagator developed in the MSc thesis [Luciardello 2024], generating ground tracks and ECI J2000 trajectories over 10-day windows.</p>
+      <span class="tag tag-cyan">R2BP propagator</span>
+    </div>
+    <div class="physics-card">
+      <span class="physics-icon">📈</span>
+      <h3>Velocity Curves</h3>
+      <p>The tool plots circular velocity V_c(H_A), apogee velocity V_A at fixed perigee altitudes (500, 5 000, 15 000 km), and the Earth-surface velocity V_i(H_A/i) as functions of apogee altitude up to 60 000 km.</p>
+      <span class="tag tag-orange">Gnuplot output</span>
+    </div>
+  </div>
+
+  <div class="formula-row">
+    <div class="formula-card">
+      <h4>Eccentric Anomaly (Kepler)</h4>
+      <div class="formula">
+        <span class="var">E</span> = 2 · arctan( √(<span class="var">1−e</span> / <span class="var">1+e</span>) · tan(<span class="var">ϑ</span>/2) )<br/>
+        <span class="var">M</span> = <span class="var">E</span> − <span class="var">e</span> · sin(<span class="var">E</span>)<br/>
+        <span class="var">n</span> = √( <span class="var">μ</span> / <span class="var">a</span>³ )<br/>
+        <span class="var">Δt</span> = (<span class="var">M₂</span> − <span class="var">M₁</span>) / <span class="var">n</span>
+      </div>
+    </div>
+    <div class="formula-card">
+      <h4>LGO Constraint (J2 corrected)</h4>
+      <div class="formula">
+        <span class="comment">// m/n repetition factor</span><br/>
+        <span class="var">m/n</span> = 1 / ( <span class="var">ω_E</span> · <span class="var">a</span><sup>3/2</sup>/√<span class="var">μ</span> · <span class="var">K</span> )<br/><br/>
+        <span class="comment">// J2 nodal correction</span><br/>
+        <span class="var">K</span> = 1 − (3J₂R_E²) / (2a²(1−e²)²) · (…)
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="full-bleed-divider"></div>
+
+<!-- DEVELOPMENT -->
+<section id="development">
+  <p class="section-label">// 02 — Development</p>
+  <h2>From MATLAB to C</h2>
+  <p class="section-intro">
+    The tool was developed in three stages, each adding precision and usability without sacrificing the validated physics from the previous stage.
+  </p>
+
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="timeline-dot dot-matlab"></div>
+      <p class="timeline-phase">Phase 1 · 2024</p>
+      <h3>MATLAB Prototype</h3>
+      <p>
+        The analysis was originally scripted in MATLAB®, replicating Fig. 6 of Razoumny [2018]. Apogee radius r_A was located via a <strong>search-grid method</strong>: a dense altitude grid (0–60 000 km) was scanned point-by-point to find where the computed m/n matched each target value. Results were validated against published figures for the special case (i = 0°, 63.4°) and the general case.
+      </p>
+      <div class="timeline-detail">
+        <span class="kw">method</span>: grid search over H_A ∈ [0, <span class="num">60000</span>] km<br/>
+        <span class="kw">cases</span>: special (φ=i) · general (φ≠i)<br/>
+        <span class="kw">output</span>: V_A curves, m/n curves, orbit markers<br/>
+        <span class="kw">ref</span>: Fig.6 of Razoumny 2018 [reproduced]
+      </div>
+    </div>
+
+    <div class="timeline-item">
+      <div class="timeline-dot dot-c"></div>
+      <p class="timeline-phase">Phase 2 · 2024</p>
+      <h3>C Implementation (LGO_C2 / LGO_GUI)</h3>
+      <p>
+        The MATLAB script was re-implemented in C for portability and to add a GUI. The core computation — grid evaluation of m/n over the full altitude range — was preserved verbatim, with the addition of J2 nodal correction and cross-platform build support (Linux and Windows/MSYS2). Results are written to a structured text table and passed to Gnuplot for live rendering.
+      </p>
+      <div class="timeline-detail">
+        <span class="kw">grid</span>: N_H = <span class="num">60001</span> points, 1 km resolution<br/>
+        <span class="kw">perigee alts</span>: <span class="num">500</span>, <span class="num">5000</span>, <span class="num">15000</span> km<br/>
+        <span class="kw">output</span>: data/table_results.txt + gnuplot<br/>
+        <span class="kw">platforms</span>: Linux · Windows (.exe)
+      </div>
+    </div>
+
+    <div class="timeline-item">
+      <div class="timeline-dot dot-newton"></div>
+      <p class="timeline-phase">Phase 3 · 2024</p>
+      <h3>Newton-Raphson Solver (lgo_newton.c)</h3>
+      <p>
+        A Newton-Raphson root-finding module replaced the grid-search marker-identification step. The solver brackets the root with a 30-point log-spaced coarse scan, then refines with Newton steps using a central-difference numerical derivative. A bisection fallback (Brent-style) activates whenever a Newton step escapes the bracket or lands in a numerically flat region. Convergence is declared at |m/n(r_A) − target| &lt; 10⁻⁹. <strong>Validation confirmed no significant difference</strong> in computed altitudes versus the grid approach, while eliminating grid-resolution artefacts.
+      </p>
+      <div class="timeline-detail">
+        <span class="kw">tol</span>: <span class="num">1e-9</span> · max_iter: <span class="num">80</span> · scan pts: <span class="num">30</span><br/>
+        <span class="kw">deriv</span>: central difference, h = r_A·<span class="num">1e-5</span><br/>
+        <span class="kw">fallback</span>: bisection (Brent-style)<br/>
+        <span class="kw">result</span>: no significant Δ vs. grid search ✓
+      </div>
+    </div>
+
+    <div class="timeline-item">
+      <div class="timeline-dot dot-gui"></div>
+      <p class="timeline-phase">Phase 4 · 2024</p>
+      <h3>GTK3 GUI Front-end</h3>
+      <p>
+        A GTK3 graphical interface wraps the computation layer, allowing full parameter configuration without recompilation. The GUI exposes all inputs — inclinations, m/n targets, special vs. general case toggle, ω or φ entry — and displays the results table inline after each run.
+      </p>
+      <div class="timeline-detail">
+        <span class="kw">framework</span>: GTK3 · libm · Gnuplot<br/>
+        <span class="kw">inputs</span>: I[], mn0[], case, ω or φ<br/>
+        <span class="kw">outputs</span>: {a, e, i, ω} table + live plot<br/>
+        <span class="kw">note</span>: linux version faster than win32
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="full-bleed-divider"></div>
+
+<!-- RESULTS -->
+<section id="results">
+  <p class="section-label">// 03 — Results</p>
+  <h2>Dwell Time Improvement</h2>
+  <p class="section-intro">
+    Apogee dwell time Δt computed for true anomaly ϑ ∈ [170°, 190°] via Kepler's equation. LGO variants (Super Tundra, Super Raindrop) show consistent improvement over their classical baselines.
+  </p>
+
+  <div class="results-grid">
+    <div class="result-cell header"><span>Tundra</span></div>
+    <div class="result-cell header"><span>Super Tundra (LGO)</span></div>
+    <div class="result-cell header"><span>RainDrop</span></div>
+    <div class="result-cell header"><span>Super RainDrop (LGO)</span></div>
+
+    <div class="result-cell">
+      <div class="result-label">Δt</div>
+      <div class="result-value">130.7</div>
+      <div class="result-unit">minutes</div>
+    </div>
+    <div class="result-cell">
+      <div class="result-label">Δt</div>
+      <div class="result-value">176</div>
+      <div class="result-unit">minutes</div>
+      <div class="result-improvement">+35%</div>
+    </div>
+    <div class="result-cell">
+      <div class="result-label">Δt</div>
+      <div class="result-value">131.5</div>
+      <div class="result-unit">minutes</div>
+    </div>
+    <div class="result-cell">
+      <div class="result-label">Δt</div>
+      <div class="result-value">175.4</div>
+      <div class="result-unit">minutes</div>
+      <div class="result-improvement">+33%</div>
+    </div>
+  </div>
+
+  <!-- Sample orbit table -->
+  <h3 style="font-family: var(--font-display); color: var(--bright); font-size:1rem; margin-bottom:1rem; font-weight:500;">
+    Sample output — 8 orbits identified (general case, ω = 135° / 90°)
+  </h3>
+  <table class="orbit-table">
+    <thead>
+      <tr>
+        <th>Idx</th>
+        <th>H_A [km]</th>
+        <th>V_A [km/s]</th>
+        <th>m/n</th>
+        <th>i [deg]</th>
+        <th>φ [deg]</th>
+        <th>ω [deg]</th>
+        <th>a [km]</th>
+        <th>e</th>
+        <th>Case</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td>35793</td><td>3.07465</td><td>1.0</td><td>0.0</td><td>−0.0000</td><td>135.0</td><td>42163.5</td><td>0.0000</td><td><span class="badge badge-lgo">general</span></td></tr>
+      <tr><td>2</td><td>32593</td><td>2.84130</td><td>1.5</td><td>0.0</td><td>−0.0000</td><td>135.0</td><td>32179.1</td><td>0.2108</td><td><span class="badge badge-lgo">general</span></td></tr>
+      <tr><td>3</td><td>29879</td><td>2.64339</td><td>2.0</td><td>0.0</td><td>−0.0000</td><td>135.0</td><td>26565.9</td><td>0.3645</td><td><span class="badge badge-lgo">general</span></td></tr>
+      <tr><td>4</td><td>27639</td><td>3.32463</td><td>1.5</td><td>63.4</td><td>−39.2172</td><td>135.0</td><td>32178.9</td><td>0.0569</td><td><span class="badge badge-lgo">general</span></td></tr>
+      <tr><td>5</td><td>25716</td><td>3.13665</td><td>2.0</td><td>63.4</td><td>−39.2172</td><td>135.0</td><td>26562.0</td><td>0.2080</td><td><span class="badge badge-lgo">general</span></td></tr>
+      <tr><td>6</td><td>53615</td><td>1.95861</td><td>1.0</td><td>63.4</td><td>−63.4000</td><td>90.0</td><td>42163.7</td><td>0.4227</td><td><span class="badge badge-lgo">general</span></td></tr>
+      <tr><td>7</td><td>45778</td><td>1.70272</td><td>1.5</td><td>63.4</td><td>−63.4000</td><td>90.0</td><td>32177.1</td><td>0.6207</td><td><span class="badge badge-lgo">general</span></td></tr>
+      <tr><td>8</td><td>39773</td><td>1.50665</td><td>2.0</td><td>63.4</td><td>−63.4000</td><td>90.0</td><td>26562.1</td><td>0.7372</td><td><span class="badge badge-lgo">general</span></td></tr>
+    </tbody>
+  </table>
+
+  <!-- General case plot from Gnuplot -->
+  <div style="margin-top: 2.5rem;">
+    <p class="section-label">// General Case — MATLAB PLOT Output</p>
+    <h3 style="font-family: var(--font-display); color: var(--bright); font-size:1rem; margin-bottom:0.6rem; font-weight:500;">
+      Orbital Velocity &amp; Repetition Factor vs Apogee Altitude
+    </h3>
+    <p style="font-size:0.875rem; color:var(--muted); margin-bottom:1.25rem; max-width:640px;">
+      V<sub>c</sub>(H<sub>A</sub>) circular velocity (blue), apogee velocity V<sub>A</sub> curves for H<sub>P</sub> = 500 / 5 000 / 15 000 km, Earth-surface velocity V<sub>i</sub> (equatorial &amp; 63.4°), and m/n repetition factor (right axis). Filled dots mark the 8 identified LGO solutions.
+    </p>
+    <div style="
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      max-width: 820px;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.35);
+    ">
+      <img
+        src="orbit_plot.png"
+        alt="Orbital Velocity and Repetition Factor vs Altitude — Gnuplot output showing V_c, V_A curves, V_i lines, and LGO solution markers"
+        style="display:block; width:100%; height:auto;"
+      />
+    </div>
+    <p style="font-size:0.76rem; color:var(--muted); margin-top:0.7rem; font-family:var(--font-mono);">
+      Fig. 1 — Reproduced from Razoumny [2018] Fig. 6. | Output of LGO_GUI.c for General case: ω = 135° / 90°.
+    </p>
+  </div>
+</section>
+
+<div class="full-bleed-divider"></div>
+
+<!-- BUILD -->
+<section id="build">
+  <p class="section-label">// 04 — Build &amp; Run</p>
+  <h2>Compile the Tool</h2>
+  <p class="section-intro">
+    The tool compiles to a single binary (GUI + computation) with no runtime dependencies beyond GTK3 and Gnuplot. The Newton solver is a drop-in include with its own standalone test target.
+  </p>
+
+  <div class="build-grid">
+    <div class="build-card">
+      <div class="build-card-header">
+        <span class="os-dot" style="background:#F97316;"></span>
+        <span>Linux</span>
+      </div>
+      <pre><span class="comment"># Install dependencies</span>
+<span class="cmd">sudo apt install</span> <span class="pkg">libgtk-3-dev gnuplot</span>
+
+<span class="comment"># Compile GUI</span>
+<span class="cmd">gcc</span> <span class="flag">-O2 -Wno-deprecated-declarations</span> \
+    $(pkg-config --cflags gtk+-3.0) \
+    <span class="flag">-o</span> lgo_gui LGO_GUI.c \
+    $(pkg-config --libs gtk+-3.0) <span class="flag">-lm</span>
+
+<span class="comment"># Run</span>
+<span class="cmd">./lgo_gui</span></pre>
+    </div>
+
+    <div class="build-card">
+      <div class="build-card-header">
+        <span class="os-dot" style="background:#3B82F6;"></span>
+        <span>Windows (MSYS2 MinGW64)</span>
+      </div>
+      <pre><span class="comment"># Install dependencies</span>
+<span class="cmd">pacman -S</span> <span class="pkg">mingw-w64-x86_64-gcc \
+  mingw-w64-x86_64-gtk3 \
+  mingw-w64-x86_64-gnuplot</span>
+
+<span class="comment"># Compile GUI</span>
+<span class="cmd">gcc</span> <span class="flag">-O2</span> $(pkg-config --cflags gtk+-3.0) \
+    <span class="flag">-o</span> lgo_gui.exe LGO_GUI.c \
+    $(pkg-config --libs gtk+-3.0) <span class="flag">-lm -mwindows</span>
+
+<span class="comment"># Run</span>
+<span class="cmd">lgo_gui.exe</span></pre>
+    </div>
+
+    <div class="build-card">
+      <div class="build-card-header">
+        <span class="os-dot" style="background:#4ADE80;"></span>
+        <span>Newton Solver — Standalone Test</span>
+      </div>
+      <pre><span class="comment"># Compile test binary</span>
+<span class="cmd">gcc</span> <span class="flag">-O2 -DLGO_NEWTON_TEST</span> \
+    <span class="flag">-o</span> lgo_newton_test lgo_newton.c <span class="flag">-lm</span>
+
+<span class="comment"># Run solver validation</span>
+<span class="cmd">./lgo_newton_test</span>
+
+<span class="comment"># Output: H_A, Va, e for all test cases</span>
+<span class="comment"># Cases: i=0,63.4 deg / special+general</span></pre>
+    </div>
+
+    <div class="build-card">
+      <div class="build-card-header">
+        <span class="os-dot" style="background:#A78BFA;"></span>
+        <span>Integrating the Newton Solver</span>
+      </div>
+      <pre><span class="comment">// Add at top of LGO_C2.c or LGO_GUI.c:</span>
+<span class="pkg">#include "lgo_newton.c"</span>
+
+<span class="comment">// Replace find_hindex() calls with:</span>
+<span class="cmd">newton_solve_all</span>(mn0, n_mn0,
+    i_rad, i_rad, <span class="flag">1</span>,   <span class="comment">/* special */</span>
+    rA_s, Va_s, rP_s);
+
+<span class="comment">// General case (phi from omega):</span>
+<span class="cmd">newton_solve_all</span>(mn0, n_mn0,
+    i_rad, phi, <span class="flag">0</span>,      <span class="comment">/* general */</span>
+    rA_s, Va_s, rP_s);</pre>
+    </div>
+  </div>
+</section>
+
+<div class="full-bleed-divider"></div>
+
+<!-- FILES -->
+<section id="files">
+  <p class="section-label">// 05 — Source Files</p>
+  <h2>Repository Contents</h2>
+  <p class="section-intro">Two self-contained C files — the GUI application and the Newton solver module.</p>
+
+  <div class="files-list">
+    <div class="file-item">
+      <span class="file-icon tag tag-cyan">.c</span>
+      <div>
+        <h4>LGO_GUI.c</h4>
+        <p>Main application. Contains the full physics computation (V_A, V_i, m/n grids, J2 correction, orbital element derivation for special and general cases) and the GTK3 GUI layer. Drives Gnuplot for live plotting and writes results to <code style="font-family:var(--font-mono); font-size:0.82rem; color:var(--cyan)">data/table_results.txt</code>. Compiles to a single binary for Linux or Windows.</p>
+      </div>
+    </div>
+    <div class="file-item">
+      <span class="file-icon tag tag-green">.c</span>
+      <div>
+        <h4>lgo_newton.c</h4>
+        <p>Drop-in Newton-Raphson solver module. Replaces the <code style="font-family:var(--font-mono); font-size:0.82rem; color:var(--cyan)">find_hindex()</code> grid-search call with a root-finding approach: 30-point coarse scan → Newton step with central-difference derivative → bisection fallback. Convergence tolerance 10⁻⁹. Includes a standalone test harness activated via <code style="font-family:var(--font-mono); font-size:0.82rem; color:var(--cyan)">-DLGO_NEWTON_TEST</code>.</p>
+      </div>
+    </div>
+    <div class="file-item">
+      <span class="file-icon tag tag-purple">.md</span>
+      <div>
+        <h4>README.md</h4>
+        <p>Full project documentation: background physics, development history, build instructions for Linux and Windows, API reference for the Newton solver, results summary, and physical constants used throughout the computation.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- References -->
+  <div style="margin-top: 3rem;">
+    <p class="section-label">// References</p>
+    <div class="citation-block" style="border-left-color: var(--cyan); margin-top: 0.75rem;">
+      <span class="citation-num" style="color:var(--cyan)">[1]</span>
+      <p>Luciardello Lecardi M., <em>"NGSO interference induced on GSO ground station: extension and application of a tool"</em>, Politecnico di Milano, MSc Thesis, 2024. <a href="https://hdl.handle.net/10589/227983" target="_blank" style="color:var(--cyan)">hdl.handle.net/10589/227983</a></p>
+    </div>
+    <div class="citation-block" style="border-left-color: var(--cyan); margin-top: 0.75rem;">
+      <span class="citation-num" style="color:var(--cyan)">[2]</span>
+      <p>Razoumny, Y. N. (2018). <em>Locally Geostationary Orbits: Optimal Geometry of Elliptic Orbit for Earth Coverage.</em> Journal of Spacecraft and Rockets, 56(4), 1017–1023. <a href="https://www.researchgate.net/publication/329948694_Locally_Geostationary_Orbits_Optimal_Geometry_of_Elliptic_Orbit_for_Earth_Coverage" target="_blank" style="color:var(--cyan)">doi.org/10.2514/1.A33699</a></p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p>
+    <strong style="color:var(--bright)">Luciardello Lecardi Matteo</strong><br/>
+    Department of Mechanics and Control · 2026
+  </p>
+  <p style="text-align:right;">
+    <!-- MSc Thesis: <a href="https://hdl.handle.net/10589/227983" target="_blank">hdl.handle.net/10589/227983</a><br/> -->
+    <span>LGO Analysis Tool · C + GTK3 + Gnuplot</span>
+  </p>
+</footer>
+
+<script>
+/* ── Kepler-accurate satellite animation ──────────────────────────────────
+   Orbit geometry (SVG coordinates, matching the SVG above):
+     Ellipse centre: cx=230, cy=220   semi-major a=200   semi-minor b=130
+     Earth focus:    Fx=78,  Fy=220
+     Apogee vertex:  (430, 220)   — right side
+     Perigee vertex: ( 30, 220)   — left side
+
+   Physical eccentricity:  c = cx - Fx = 230-78 = 152   e = c/a = 152/200 = 0.76
+
+   Kepler's equation:  M = E - e·sin(E)
+     True anomaly θ → eccentric anomaly E → mean anomaly M → time t = M / n
+   We invert M(t) numerically (Newton iterations) to get E(t), then θ(t),
+   then the (x,y) position in SVG coordinates.
+
+   Convention: θ=0 at apogee (right vertex), θ increases counter-clockwise
+   (upper half first — matching the original animateMotion path direction).
+──────────────────────────────────────────────────────────────────────── */
+(function () {
+  const dot   = document.getElementById('keplerDot');
+  if (!dot) return;
+
+  // SVG orbit parameters
+  const cx = 230, cy = 220;   // ellipse centre
+  const a  = 200, b  = 130;   // semi-major, semi-minor axes (SVG px)
+  const Fx = 78,  Fy = 220;   // Earth focus
+  const ecc = Math.sqrt(1 - (b * b) / (a * a));  // ≈ 0.7599
+
+  // Period (seconds, purely visual — tune for feel)
+  const T = 9.0;
+
+  // Solve Kepler's equation M = E - e·sin(E) for E given M
+  function solveKepler(M, e) {
+    let E = M;
+    for (let i = 0; i < 50; i++) {
+      const dE = (M - E + e * Math.sin(E)) / (1 - e * Math.cos(E));
+      E += dE;
+      if (Math.abs(dE) < 1e-10) break;
+    }
+    return E;
+  }
+
+  // Convert eccentric anomaly E → true anomaly θ
+  // Standard: θ=0 at perigee. We offset by π so θ=0 maps to apogee.
+  function eccToTrue(E, e) {
+    const nu = 2 * Math.atan2(
+      Math.sqrt(1 + e) * Math.sin(E / 2),
+      Math.sqrt(1 - e) * Math.cos(E / 2)
+    );
+    return nu + Math.PI; // shift so 0 = apogee (right vertex)
+  }
+
+  // Map true anomaly θ → SVG (x, y)
+  // θ=0 → right vertex (apogee), going counter-clockwise (upper half first in SVG, which means -y direction)
+  function trueToSVG(theta) {
+    // Parametric ellipse: standard angle φ such that:
+    //   x_centre_rel = a·cos(φ),  y_centre_rel = b·sin(φ)
+    // True anomaly θ=0 at right vertex → φ=0.
+    // Counter-clockwise in math coords = clockwise in SVG (y-axis flipped).
+    // To go counter-clockwise visually in SVG (upper arc first) we negate the angle.
+    const phi = -theta;   // θ=0 at apogee (right), increases CCW in math → CW visually in SVG (upper arc first)
+    const x = cx + a * Math.cos(phi);
+    const y = cy + b * Math.sin(phi);
+    return { x, y };
+  }
+
+  let startTime = null;
+
+  function frame(ts) {
+    if (!startTime) startTime = ts;
+    const elapsed = (ts - startTime) / 1000;   // seconds
+    const M = ((elapsed % T) / T) * 2 * Math.PI; // mean anomaly 0→2π
+
+    const E     = solveKepler(M, ecc);
+    const theta = eccToTrue(E, ecc);
+    const { x, y } = trueToSVG(theta);
+
+    dot.setAttribute('cx', x.toFixed(2));
+    dot.setAttribute('cy', y.toFixed(2));
+
+    // Subtle size pulse: slightly larger near apogee (slow), smaller near perigee (fast)
+    const r = 3.5 + 1.5 * (1 + Math.cos(theta)) / 2;  // 3.5 at perigee → 5 at apogee
+    dot.setAttribute('r', r.toFixed(2));
+
+    requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>
