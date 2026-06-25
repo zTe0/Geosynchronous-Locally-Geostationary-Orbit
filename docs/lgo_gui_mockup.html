@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Geosynchronous LGO Analysis</title>
+<style>
+  /* ── Reset & base ─────────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #1e1e2e;
+    --bg2:       #27273a;
+    --bg3:       #313148;
+    --border:    #3a3a55;
+    --border2:   #4a4a6a;
+    --text:      #cdd6f4;
+    --text2:     #a6adc8;
+    --text3:     #6c7086;
+    --accent:    #89b4fa;
+    --accent2:   #b4befe;
+    --green:     #a6e3a1;
+    --red:       #f38ba8;
+    --yellow:    #f9e2af;
+    --mono:      'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --sans:      'Inter', system-ui, -apple-system, sans-serif;
+    --radius:    6px;
+    --radius-lg: 10px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 32px 16px 48px;
+  }
+
+  /* ── Window chrome ────────────────────────────────────────────────────── */
+  .window {
+    width: 100%;
+    max-width: 700px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.04);
+  }
+
+  .titlebar {
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+    padding: 9px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    user-select: none;
+  }
+
+  .dots { display: flex; gap: 7px; }
+  .dot  { width: 13px; height: 13px; border-radius: 50%; }
+
+  .title-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    letter-spacing: 0.01em;
+  }
+
+  /* ── Body ─────────────────────────────────────────────────────────────── */
+  .body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+
+  /* ── Frames ───────────────────────────────────────────────────────────── */
+  .frame {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    position: relative;
+    padding: 14px 14px 14px;
+  }
+
+  .frame-legend {
+    position: absolute;
+    top: -10px;
+    left: 12px;
+    background: var(--bg2);
+    padding: 0 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /* ── Parameter grid ───────────────────────────────────────────────────── */
+  .param-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 9px 14px;
+    align-items: center;
+    margin-top: 6px;
+  }
+
+  .param-label {
+    font-size: 13px;
+    color: var(--text2);
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .param-input {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 5px 9px;
+    color: var(--text);
+    width: 100%;
+    min-width: 0;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .param-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(137,180,250,0.18);
+  }
+  .param-input::placeholder { color: var(--text3); }
+
+  .sep {
+    grid-column: 1 / -1;
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
+
+  /* ── Radio buttons ────────────────────────────────────────────────────── */
+  .radio-row { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+
+  .radio-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .radio-label input[type="radio"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 15px; height: 15px;
+    border: 1.5px solid var(--border2);
+    border-radius: 50%;
+    background: var(--bg);
+    cursor: pointer;
+    transition: border-color 0.15s;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .radio-label input[type="radio"]:checked {
+    border-color: var(--accent);
+    background: var(--bg);
+  }
+  .radio-label input[type="radio"]:checked::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* ── Sub-frame (General case) ─────────────────────────────────────────── */
+  .subframe {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    position: relative;
+    margin-top: 4px;
+    padding: 10px 12px 12px;
+    transition: opacity 0.15s;
+    grid-column: 1 / -1;
+  }
+  .subframe.disabled {
+    opacity: 0.32;
+    pointer-events: none;
+  }
+  .subframe-legend {
+    position: absolute;
+    top: -9px; left: 10px;
+    background: var(--bg2);
+    padding: 0 5px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /* ── Run row ──────────────────────────────────────────────────────────── */
+  .run-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .btn-run {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--sans);
+    background: var(--accent);
+    color: #11111b;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    transition: background 0.12s, transform 0.08s;
+    white-space: nowrap;
+  }
+  .btn-run:hover  { background: var(--accent2); }
+  .btn-run:active { transform: scale(0.97); }
+  .btn-run:disabled {
+    background: var(--bg3);
+    color: var(--text3);
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .status-label {
+    font-size: 13px;
+    color: var(--text2);
+    font-family: var(--mono);
+  }
+  .status-label.ok     { color: var(--green); }
+  .status-label.err    { color: var(--red); }
+  .status-label.running{ color: var(--yellow); }
+
+  /* ── Results ──────────────────────────────────────────────────────────── */
+  .results-frame {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    position: relative;
+    padding: 4px;
+  }
+  .results-legend {
+    position: absolute;
+    top: -9px; left: 12px;
+    background: var(--bg2);
+    padding: 0 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .results-scroll {
+    height: 200px;
+    overflow-y: auto;
+    padding: 8px 10px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border2) transparent;
+  }
+  .results-scroll::-webkit-scrollbar { width: 6px; }
+  .results-scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  pre.results-text {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.65;
+    white-space: pre;
+    margin: 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="window">
+  <!-- Title bar -->
+  <div class="titlebar">
+    <div class="dots">
+      <div class="dot" style="background:#FF5F57"></div>
+      <div class="dot" style="background:#FFBD2E"></div>
+      <div class="dot" style="background:#27C840"></div>
+    </div>
+    <span class="title-text">Geosynchronous LGO Analysis</span>
+  </div>
+
+  <!-- Body -->
+  <div class="body">
+
+    <!-- Parameters frame -->
+    <div class="frame" id="param-frame">
+      <span class="frame-legend">Parameters</span>
+      <div class="param-grid">
+
+        <span class="param-label">Inclinations I [deg]:</span>
+        <input class="param-input" id="entry_I" value="0, 63.4"
+               title="Comma-separated inclination values in degrees">
+
+        <span class="param-label">m/n targets [−]:</span>
+        <input class="param-input" id="entry_mn0" value="1.0, 1.5, 2.0"
+               title="Comma-separated target m/n repetition factors">
+
+        <div class="sep"></div>
+
+        <span class="param-label">Case:</span>
+        <div class="radio-row">
+          <label class="radio-label">
+            <input type="radio" name="case" id="radio_special" checked>
+            Special &nbsp;(φ = i)
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="case" id="radio_general">
+            General
+          </label>
+        </div>
+
+        <!-- General case sub-frame -->
+        <div class="subframe disabled" id="general_frame">
+          <span class="subframe-legend">General case input</span>
+          <div class="param-grid" style="margin-top:2px">
+            <span class="param-label">Input via:</span>
+            <div class="radio-row">
+              <label class="radio-label">
+                <input type="radio" name="mode" id="radio_om" checked>
+                ω &nbsp;arg. of perigee [deg]
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="mode" id="radio_phi">
+                φ &nbsp;sub-satellite latitude [deg]
+              </label>
+            </div>
+            <span class="param-label" id="lbl_angle_unit">ω values [deg]:</span>
+            <input class="param-input" id="entry_angles" value="135, 90"
+                   placeholder="e.g. 135, 90">
+          </div>
+        </div>
+
+      </div><!-- /param-grid -->
+    </div><!-- /parameters frame -->
+
+    <!-- Run row -->
+    <div class="run-row">
+      <button class="btn-run" id="btn_run">▶ &nbsp;Run</button>
+      <span class="status-label" id="lbl_status">Ready</span>
+    </div>
+
+    <!-- Results frame -->
+    <div class="results-frame">
+      <span class="results-legend">Results</span>
+      <div class="results-scroll">
+        <pre class="results-text" id="results_text">Set parameters above and press ▶ Run.
+Results will appear here.</pre>
+      </div>
+    </div>
+
+  </div><!-- /body -->
+</div><!-- /window -->
+
+<script>
+/* ════════════════════════════════════════════════════════════════════════════
+ *  PHYSICS — ported from LGO_GUI.c
+ * ════════════════════════════════════════════════════════════════════════════ */
+const MU    = 398600.4;       // [km³/s²]
+const OME   = 7.2921159e-5;   // [s⁻¹]  Earth rotation rate
+const RMEAN = 6371.0;         // [km]   Earth mean radius
+const RE    = 6378.0;         // [km]   Earth equatorial radius
+const J2    = 0.0010827;      // [-]    second zonal harmonic
+const PI    = Math.PI;
+const N_H   = 60001;          // altitude grid 0…60000 km
+
+function sq(x) { return x * x; }
+
+/* ── compute_K_mn ─────────────────────────────────────────────────────────── */
+function compute_K_mn(a, e, i_rad) {
+  const one_m_e2 = 1.0 - e * e;
+  if (a <= 0.0 || one_m_e2 <= 0.0) return null;
+
+  const ci   = Math.cos(i_rad);
+  const a2   = a * a;
+  const a3h  = Math.pow(a, 1.5);
+  const a7h  = Math.pow(a, 3.5);
+  const e2sq = sq(one_m_e2);
+  const sqe  = Math.sqrt(one_m_e2);
+
+  const K = 1.0 - (1.5 * J2 * RE * RE / (a2 * e2sq)) *
+    ( (10.0 * sq(ci) - 2.0) / 4.0
+    - (3.0  * sq(ci) - 1.0) / 4.0 * sqe
+    + Math.sqrt(MU) * ci / (OME * a7h * e2sq) );
+
+  const mn = 1.0 / (OME * a3h / Math.sqrt(MU) * K);
+
+  if (!isFinite(K) || !isFinite(mn) || mn <= 0.0) return null;
+  return { K, mn };
+}
+
+/* ── find_hindex ──────────────────────────────────────────────────────────── */
+function find_hindex(mn_arr, mn0) {
+  const TOL = 0.005;
+  return mn0.map(target => {
+    let best = 1e30, idx = -1;
+    for (let h = 0; h < mn_arr.length; h++) {
+      const v = mn_arr[h];
+      if (!isFinite(v) || v <= 0.0) continue;
+      const d = Math.abs(v - target);
+      if (d < best) { best = d; idx = h; }
+    }
+    if (idx !== -1 && Math.abs(mn_arr[idx] - target) > TOL) idx = -1;
+    return idx;
+  });
+}
+
+/* ── LGO_C2 ───────────────────────────────────────────────────────────────── *
+ *  Z=0 → special (phi=i), Z=1 → general                                      *
+ *  angles: omega [deg] when use_om=true, phi [deg] when use_om=false          *
+ *  Returns array of result objects.                                            */
+function LGO_C2(I, mn0, angles, Z, use_om) {
+  // Build altitude and radius arrays
+  const H  = new Float64Array(N_H);
+  const r  = new Float64Array(N_H);
+  for (let h = 0; h < N_H; h++) {
+    H[h] = h;
+    r[h] = h + RMEAN;
+  }
+
+  const DATA = [];
+
+  for (let k = 0; k < I.length; k++) {
+    const i_rad = I[k] * PI / 180.0;
+    const ci    = Math.cos(i_rad);
+    const ci2   = ci * ci;
+
+    if (Z === 0) {
+      /* ── Special LGO: phi = i ─────────────────────────────────────────── */
+      const omega  = 270.0;  // fixed for special case
+      const mn_k   = new Float64Array(N_H).fill(NaN);
+      const Va_k   = new Float64Array(N_H).fill(NaN);
+      const A_k    = new Float64Array(N_H).fill(NaN);
+      const E_k    = new Float64Array(N_H).fill(NaN);
+
+      for (let h = 0; h < N_H; h++) {
+        const rAh = r[h];
+        const rA3 = rAh * rAh * rAh;
+        const den = 2.0 * MU - sq(OME) * rA3 * ci2;
+        if (den <= 0.0 || Math.abs(den) < 1e-6) continue;
+        const rp = sq(OME) * rA3 * rAh * ci2 / den;
+        if (rp <= 0.0 || rp > rAh) continue;
+        const a = (rAh + rp) / 2.0;
+        const e = (rAh - rp) / (rAh + rp);
+        const res = compute_K_mn(a, e, i_rad);
+        if (!res) continue;
+        mn_k[h] = res.mn;
+        Va_k[h] = Math.sqrt(2.0 * MU * rp / (rAh * (rAh + rp)));
+        A_k[h]  = a;
+        E_k[h]  = e;
+      }
+
+      const hindex = find_hindex(mn_k, mn0);
+      for (let t = 0; t < mn0.length; t++) {
+        const h = hindex[t];
+        if (h < 0 || !isFinite(Va_k[h])) continue;
+        DATA.push({
+          H:       H[h],
+          Va:      Va_k[h],
+          mn:      mn0[t],
+          i_rad,
+          phi:     i_rad,
+          omega,
+          a:       A_k[h],
+          e:       E_k[h],
+          has_phi: false
+        });
+      }
+
+    } else {
+      /* ── General LGO ──────────────────────────────────────────────────── */
+      for (let o = 0; o < angles.length; o++) {
+        if (I[k] === 0.0 && o > 0) continue; // skip duplicates at i=0
+
+        let phi, omega_deg;
+        if (use_om) {
+          omega_deg = angles[o];
+          phi = Math.asin(Math.sin(angles[o] * PI / 180.0 + PI) * Math.sin(i_rad));
+        } else {
+          phi = angles[o] * PI / 180.0;
+          const sinRatio = Math.sin(phi) / Math.sin(i_rad);
+          omega_deg = (Math.asin(Math.max(-1, Math.min(1, sinRatio))) - PI) * 180.0 / PI;
+        }
+
+        if (Math.abs(phi) > Math.abs(i_rad) + 1e-9) continue; // |phi| > |i| invalid
+
+        const cp   = Math.cos(phi);
+        const sp   = Math.sin(phi);
+        const tp   = Math.abs(cp) > 1e-9 ? sp / cp : 0.0;
+        const cosg = Math.sqrt(Math.max(0.0, 1.0 - sq(Math.sin(i_rad)) + sq(tp) * ci2));
+
+        const mn_g  = new Float64Array(N_H).fill(NaN);
+        const Va_g  = new Float64Array(N_H).fill(NaN);
+        const A_g   = new Float64Array(N_H).fill(NaN);
+        const E_g   = new Float64Array(N_H).fill(NaN);
+
+        for (let h = 0; h < N_H; h++) {
+          const rAh = r[h];
+          const rA3 = rAh * rAh * rAh;
+          const den = 2.0 * MU * cosg * cosg - sq(OME) * rA3 * sq(cp);
+          if (den <= 0.0 || Math.abs(den) < 1e-6) continue;
+          const rp = sq(OME) * rA3 * rAh * sq(cp) / den;
+          if (rp <= 0.0 || rp > rAh) continue;
+          const a = (rAh + rp) / 2.0;
+          const e = (rAh - rp) / (rAh + rp);
+          const res = compute_K_mn(a, e, i_rad);
+          if (!res) continue;
+          mn_g[h] = res.mn;
+          Va_g[h] = Math.sqrt(2.0 * MU * rp / (rAh * (rAh + rp)));
+          A_g[h]  = a;
+          E_g[h]  = e;
+        }
+
+        const hindex = find_hindex(mn_g, mn0);
+        for (let t = 0; t < mn0.length; t++) {
+          const h = hindex[t];
+          if (h < 0 || !isFinite(Va_g[h])) continue;
+          DATA.push({
+            H:       H[h],
+            Va:      Va_g[h],
+            mn:      mn0[t],
+            i_rad,
+            phi,
+            omega:   omega_deg,
+            a:       A_g[h],
+            e:       E_g[h],
+            has_phi: true
+          });
+        }
+      }
+    }
+  } // inclination loop
+
+  return DATA;
+}
+
+/* ── format_data_table ────────────────────────────────────────────────────── */
+function format_data_table(DATA) {
+  const HDR =
+    'Idx  H[km]    Va[km/s]   m/n  i[deg]  phi[deg]  om[deg]  a[km]    e        Case\n' +
+    '─'.repeat(85) + '\n';
+
+  const rows = DATA.map((d, j) => {
+    const idx   = String(j + 1).padEnd(4);
+    const H     = d.H.toFixed(0).padEnd(8);
+    const Va    = d.Va.toFixed(5).padEnd(10);
+    const mn    = d.mn.toFixed(1).padEnd(4);
+    const i_deg = (d.i_rad * 180 / PI).toFixed(1).padEnd(7);
+    const phi   = (d.phi   * 180 / PI).toFixed(4).padEnd(9);
+    const om    = d.omega.toFixed(1).padEnd(8);
+    const a     = d.a.toFixed(1).padEnd(8);
+    const e     = d.e.toFixed(4).padEnd(8);
+    const cas   = d.has_phi ? 'general' : 'special';
+    return `${idx} ${H} ${Va} ${mn} ${i_deg} ${phi} ${om} ${a} ${e} ${cas}`;
+  }).join('\n');
+
+  const footer =
+    '\n' + '─'.repeat(85) + '\n' +
+    `Total: ${DATA.length} orbit${DATA.length === 1 ? '' : 's'} identified`;
+
+  return HDR + rows + footer;
+}
+
+/* ── parse_doubles ────────────────────────────────────────────────────────── */
+function parse_doubles(str) {
+  return str.split(/[\s,]+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 0)
+    .map(Number)
+    .filter(n => isFinite(n));
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ *  UI wiring
+ * ════════════════════════════════════════════════════════════════════════════ */
+const elGenFrame    = document.getElementById('general_frame');
+const elRadioGen    = document.getElementById('radio_general');
+const elRadioSp     = document.getElementById('radio_special');
+const elRadioOm     = document.getElementById('radio_om');
+const elRadioPhi    = document.getElementById('radio_phi');
+const elLblAngle    = document.getElementById('lbl_angle_unit');
+const elAngles      = document.getElementById('entry_angles');
+const elBtnRun      = document.getElementById('btn_run');
+const elStatus      = document.getElementById('lbl_status');
+const elResults     = document.getElementById('results_text');
+
+elRadioGen.addEventListener('change', onCaseToggle);
+elRadioSp .addEventListener('change', onCaseToggle);
+elRadioOm .addEventListener('change', onModeToggle);
+elRadioPhi.addEventListener('change', onModeToggle);
+elBtnRun  .addEventListener('click',  onRun);
+
+function onCaseToggle() {
+  elGenFrame.classList.toggle('disabled', !elRadioGen.checked);
+}
+
+function onModeToggle() {
+  if (elRadioOm.checked) {
+    elLblAngle.textContent    = 'ω values [deg]:';
+    elAngles.placeholder      = 'e.g. 135, 90';
+  } else {
+    elLblAngle.textContent    = 'φ values [deg]:';
+    elAngles.placeholder      = 'e.g. 53, 30';
+  }
+}
+
+function setStatus(msg, cls) {
+  elStatus.textContent = msg;
+  elStatus.className   = 'status-label' + (cls ? ' ' + cls : '');
+}
+
+function onRun() {
+  const I_arr   = parse_doubles(document.getElementById('entry_I').value);
+  const mn0_arr = parse_doubles(document.getElementById('entry_mn0').value);
+  const ang_arr = parse_doubles(elAngles.value);
+  const Z       = elRadioGen.checked ? 1 : 0;
+  const use_om  = elRadioOm.checked;
+
+  // Validate
+  if (I_arr.length < 1 || mn0_arr.length < 1) {
+    setStatus('⚠  Provide at least one inclination and one m/n target.', 'err');
+    return;
+  }
+  if (Z === 1 && ang_arr.length < 1) {
+    setStatus('⚠  General case requires at least one angle value.', 'err');
+    return;
+  }
+
+  elBtnRun.disabled = true;
+  setStatus('Running…', 'running');
+  elResults.textContent = '';
+
+  // Defer to let the browser repaint before the heavy loop
+  setTimeout(() => {
+    try {
+      const DATA = LGO_C2(I_arr, mn0_arr, ang_arr, Z, use_om);
+      elResults.textContent = format_data_table(DATA);
+      setStatus(`✓  ${DATA.length} orbit${DATA.length === 1 ? '' : 's'} identified`, 'ok');
+    } catch (err) {
+      elResults.textContent = 'Error: ' + err.message;
+      setStatus('Error during computation.', 'err');
+    }
+    elBtnRun.disabled = false;
+  }, 20);
+}
+</script>
+</body>
+</html>

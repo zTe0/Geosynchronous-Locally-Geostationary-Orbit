@@ -584,6 +584,7 @@
     <li><a href="#build">Build</a></li>
     <li><a href="#gui">GUI</a></li>
     <li><a href="#files">Files</a></li>
+    <li><a href="#interactive">Interactive</a></li>
     <li><a href="https://github.com/zTe0/Geosynchronous-Locally-Geostationary-Orbit">GitHub ↗</a></li>
     <li><a href="https://zte0.github.io/Portfolio/" target="_blank">Portfolio ↗</a></li>
   </ul>
@@ -604,31 +605,7 @@
   </div>
 
   <div class="hero-visual">
-    <!--
-      Orbit geometry (SVG coords):
-        Ellipse semi-major a=200, semi-minor b=130, centre cx=230, cy=220
-        Earth (focus) at cx + c where c=sqrt(a²-b²)=sqrt(40000-16900)=sqrt(23100)≈152
-        Focus at x=230+152=382? No — we want apogee RIGHT and perigee visible near Earth on the LEFT.
-        Place focus (Earth) at x=160, y=220.
-        Apogee (rightmost vertex) at x=160+a_right. With cx=230:
-          right vertex = cx+a = 230+200=430  → r_A = 430-160 = 270 px
-          left  vertex = cx-a = 230-200= 30  → r_P =  160-30 = 130 px   (visible, left side)
-        c = cx - Fx = 230-160 = 70  →  b=sqrt(a²-c²)=sqrt(40000-4900)=sqrt(35100)≈187
-        Use a=200, b=130 (more eccentric, visually clearer), c=sqrt(200²-130²)=sqrt(23100)≈152
-        So Fx = cx - c = 230-152 = 78  (Earth focus x)
-        Right vertex (apogee):  x=430, y=220   r_A = 430-78 = 352 px (large)
-        Left  vertex (perigee): x= 30, y=220   r_P =  78-30 =  48 px (small, close to Earth)
-        → Earth circle radius ~28px, centred at (78,220), fits nicely between left edge and centre.
-
-      animateMotion path: full ellipse starting at apogee (430,220),
-        going counter-clockwise (sweep-flag=0 in SVG = counter-clockwise in screen coords,
-        but SVG y-axis is down so sweep=0 is clockwise visually in space — 
-        we use two 180° arcs to trace the full ellipse):
-          M 430 220  A 200 130 0 0 0  30 220  A 200 130 0 0 0  430 220
-        The dot starts at apogee and travels the orbit.
-        Kepler: satellite moves SLOW near apogee, FAST near perigee.
-        We achieve this via calcMode=spline with appropriate keySplines.
-    -->
+    <!-- Orbit SVG (unchanged) -->
     <svg class="orbit-svg" viewBox="0 0 500 440" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <radialGradient id="earthGrad" cx="50%" cy="40%" r="55%">
@@ -670,13 +647,6 @@
         <circle cx="10"  cy="120" r="0.9" fill="white" opacity="0.5"/>
       </g>
 
-      <!--
-        Ellipse: cx=230, cy=220, rx=200, ry=130
-        Earth focus: (78, 220)
-        Apogee vertex: (430, 220)  — right side, far from Earth
-        Perigee vertex: (30, 220)  — left side, close to Earth
-      -->
-
       <!-- Orbit glow halo -->
       <ellipse cx="230" cy="220" rx="200" ry="130" fill="none"
                stroke="#38BDF8" stroke-width="16" opacity="0.04"/>
@@ -685,8 +655,7 @@
       <ellipse cx="230" cy="220" rx="200" ry="130" fill="none"
                stroke="#1E3A5F" stroke-width="1.5"/>
 
-      <!-- Dwell arc highlight near apogee (right side) — short arc around x=430 -->
-      <!-- Apogee arc: stroke-dasharray highlights ~70px of the 1042px total circumference -->
+      <!-- Dwell arc highlight near apogee -->
       <ellipse cx="230" cy="220" rx="200" ry="130" fill="none"
                stroke="#38BDF8" stroke-width="2.5"
                stroke-dasharray="80 9999"
@@ -695,70 +664,62 @@
         <animate attributeName="opacity" values="0.7;1;0.7" dur="3s" repeatCount="indefinite"/>
       </ellipse>
 
-      <!-- Earth glow (focus at 78,220) -->
+      <!-- Earth glow -->
       <circle cx="78" cy="220" r="48" fill="url(#glowGrad)"/>
 
       <!-- Earth body -->
       <circle cx="78" cy="220" r="28" fill="url(#earthGrad)"/>
-      <!-- Continent suggestion -->
       <ellipse cx="71"  cy="213" rx="9"  ry="6"  fill="#22C55E" opacity="0.35" transform="rotate(-20,71,213)"/>
       <ellipse cx="84"  cy="227" rx="6"  ry="4"  fill="#22C55E" opacity="0.30" transform="rotate(10,84,227)"/>
       <ellipse cx="70"  cy="229" rx="5"  ry="3.5" fill="#22C55E" opacity="0.25"/>
 
-      <!-- Focus dot (Earth centre) -->
+      <!-- Focus dot -->
       <circle cx="78" cy="220" r="3" fill="#38BDF8" opacity="0.6"/>
 
-      <!-- Perigee marker (left vertex at x=30, y=220) -->
+      <!-- Perigee marker -->
       <circle cx="30" cy="220" r="5" fill="none" stroke="#94A3B8" stroke-width="1.5" opacity="0.6"/>
       <line x1="30" y1="214" x2="30" y2="200" stroke="#94A3B8" stroke-width="1" opacity="0.5"/>
       <text x="35" y="198" font-family="JetBrains Mono, monospace" font-size="9"
             fill="#94A3B8" opacity="0.65">perigee</text>
 
-      <!-- rP annotation (Earth to perigee) -->
       <line x1="78" y1="220" x2="30" y2="220" stroke="#94A3B8" stroke-width="0.8"
             stroke-dasharray="3 3" opacity="0.25"/>
       <text x="52" y="235" font-family="JetBrains Mono, monospace" font-size="8"
             fill="#94A3B8" opacity="0.4" text-anchor="middle">r_P</text>
 
-      <!-- Apogee marker (right vertex at x=430, y=220) -->
+      <!-- Apogee marker -->
       <circle cx="430" cy="220" r="5" fill="none" stroke="#FB923C" stroke-width="1.5" opacity="0.85"/>
       <line x1="430" y1="214" x2="430" y2="198" stroke="#FB923C" stroke-width="1" opacity="0.6"/>
       <text x="410" y="196" font-family="JetBrains Mono, monospace" font-size="9"
             fill="#FB923C" opacity="0.85">apogee</text>
 
-      <!-- rA annotation (Earth to apogee) -->
       <line x1="78" y1="220" x2="430" y2="220" stroke="#38BDF8" stroke-width="0.8"
             stroke-dasharray="4 3" opacity="0.25"/>
       <text x="254" y="212" font-family="JetBrains Mono, monospace" font-size="9"
             fill="#38BDF8" opacity="0.45" text-anchor="middle">r_A</text>
 
-      <!-- V_A label near apogee -->
       <text x="440" y="248" font-family="JetBrains Mono, monospace" font-size="9"
             fill="#38BDF8" opacity="0.75">V_A</text>
 
-      <!-- Dwell time brace near apogee -->
       <path d="M 418 192 Q 448 178 438 220 Q 448 262 418 248"
             fill="none" stroke="#38BDF8" stroke-width="1" opacity="0.4"/>
       <text x="458" y="224" font-family="JetBrains Mono, monospace" font-size="9"
             fill="#38BDF8" opacity="0.55" text-anchor="middle">Δt</text>
 
-      <!-- ω arc label (argument of perigee, angle at focus from reference) -->
       <path d="M 110 220 A 32 32 0 0 1 90 192" fill="none" stroke="#A78BFA"
             stroke-width="1" opacity="0.5"/>
       <text x="114" y="200" font-family="JetBrains Mono, monospace" font-size="9"
             fill="#A78BFA" opacity="0.65">ω</text>
 
-      <!-- inclination arc suggestion (bottom of ellipse) -->
       <path d="M 220 350 A 50 50 0 0 1 270 350" fill="none"
             stroke="#4ADE80" stroke-width="1" opacity="0.4" stroke-dasharray="3 2"/>
       <text x="232" y="368" font-family="JetBrains Mono, monospace" font-size="9"
             fill="#4ADE80" opacity="0.5">i</text>
 
-      <!-- m/n label top-left -->
       <text x="80" y="90" font-family="JetBrains Mono, monospace" font-size="10"
             fill="#94A3B8" opacity="0.55">m/n repetition</text>
 
-      <!-- Satellite dot — JS Kepler-driven, id referenced by script below -->
+      <!-- Satellite dot animated by JS -->
       <circle id="keplerDot" r="5" fill="#38BDF8" filter="url(#softglow)" cx="430" cy="220"/>
     </svg>
   </div>
@@ -948,7 +909,6 @@
     </div>
   </div>
 
-  <!-- Sample orbit table -->
   <h3 style="font-family: var(--font-display); color: var(--bright); font-size:1rem; margin-bottom:1rem; font-weight:500;">
     Sample output — 8 orbits identified (general case, ω = 135° / 90°)
   </h3>
@@ -1095,14 +1055,15 @@
 
 <div class="full-bleed-divider"></div>
 
-<!-- General case plot from Gnuplot -->
+<!-- GUI -->
 <section id="gui">
-  <p class="section-label">// 05 Gui</p>
+  <p class="section-label">// 05 — GUI</p>
   <h3 style="font-family: var(--font-display); color: var(--bright); font-size:1rem; margin-bottom:0.6rem; font-weight:500;">
     GTK3 GUI front-end (.exe / linux)
   </h3>
   <p style="font-size:0.875rem; color:var(--muted); margin-bottom:1.25rem; max-width:640px;">
-    The LGO Analysis Tool features a GTK3 graphical interface that exposes all solver parameters — inclinations, m/n targets, special vs. general case toggle, and ω/φ entry — without requiring recompilation. Results are displayed inline as a structured table and passed live to Gnuplot for immediate visualisation of the velocity and repetition-factor curves.  </p>
+    The LGO Analysis Tool features a GTK3 graphical interface that exposes all solver parameters — inclinations, m/n targets, special vs. general case toggle, and ω/φ entry — without requiring recompilation. Results are displayed inline as a structured table and passed live to Gnuplot for immediate visualisation of the velocity and repetition-factor curves.
+  </p>
   <div style="
     background: #fff;
     border: 1px solid var(--border);
@@ -1117,10 +1078,9 @@
       style="display:block; width:100%; height:auto;"
     />
   </div>
-  <!-- <p style="font-size:0.76rem; color:var(--muted); margin-top:0.7rem; font-family:var(--font-mono);">
-    Fig. 1 — Reproduced from Razoumny [2018] Fig. 6. | Output of LGO_GUI.c for General case: ω = 135° / 90°.
-  </p> -->
 </section>
+
+<div class="full-bleed-divider"></div>
 
 <!-- FILES -->
 <section id="files">
@@ -1166,6 +1126,32 @@
   </div>
 </section>
 
+<!-- ─── NEW INTERACTIVE TOOL SECTION ─── -->
+<section id="interactive">
+  <p class="section-label">// 07 — Interactive Tool</p>
+  <h2>Run the LGO Analysis in Your Browser</h2>
+  <p class="section-intro">
+    Use the panel below to compute Locally Geostationary Orbits. Adjust inclinations, m/n targets, switch between special/general cases, and view results instantly.
+  </p>
+  <div style="
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #1e1e2e; /* match mockup background */
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  ">
+    <iframe
+      src="lgo_gui_mockup.html"
+      style="width:100%; height:650px; border:none; display:block;"
+      loading="lazy"
+      title="LGO Analysis Tool"
+    ></iframe>
+  </div>
+  <p style="font-size:0.8rem; color:var(--muted); margin-top:1rem;">
+    The tool runs client-side – your parameters are never sent to a server.
+  </p>
+</section>
+
 <!-- FOOTER -->
 <footer>
   <p>
@@ -1173,43 +1159,22 @@
     Department of Mechanics and Control · 2026
   </p>
   <p style="text-align:right;">
-    <!-- MSc Thesis: <a href="https://hdl.handle.net/10589/227983" target="_blank">hdl.handle.net/10589/227983</a><br/> -->
     <span>LGO Analysis Tool · C + GTK3 + Gnuplot</span>
   </p>
 </footer>
 
 <script>
-/* ── Kepler-accurate satellite animation ──────────────────────────────────
-   Orbit geometry (SVG coordinates, matching the SVG above):
-     Ellipse centre: cx=230, cy=220   semi-major a=200   semi-minor b=130
-     Earth focus:    Fx=78,  Fy=220
-     Apogee vertex:  (430, 220)   — right side
-     Perigee vertex: ( 30, 220)   — left side
-
-   Physical eccentricity:  c = cx - Fx = 230-78 = 152   e = c/a = 152/200 = 0.76
-
-   Kepler's equation:  M = E - e·sin(E)
-     True anomaly θ → eccentric anomaly E → mean anomaly M → time t = M / n
-   We invert M(t) numerically (Newton iterations) to get E(t), then θ(t),
-   then the (x,y) position in SVG coordinates.
-
-   Convention: θ=0 at apogee (right vertex), θ increases counter-clockwise
-   (upper half first — matching the original animateMotion path direction).
-──────────────────────────────────────────────────────────────────────── */
+/* ── Kepler-accurate satellite animation (unchanged) ── */
 (function () {
   const dot   = document.getElementById('keplerDot');
   if (!dot) return;
 
-  // SVG orbit parameters
-  const cx = 230, cy = 220;   // ellipse centre
-  const a  = 200, b  = 130;   // semi-major, semi-minor axes (SVG px)
-  const Fx = 78,  Fy = 220;   // Earth focus
-  const ecc = Math.sqrt(1 - (b * b) / (a * a));  // ≈ 0.7599
-
-  // Period (seconds, purely visual — tune for feel)
+  const cx = 230, cy = 220;
+  const a  = 200, b  = 130;
+  const Fx = 78, Fy = 220;
+  const ecc = Math.sqrt(1 - (b * b) / (a * a));
   const T = 9.0;
 
-  // Solve Kepler's equation M = E - e·sin(E) for E given M
   function solveKepler(M, e) {
     let E = M;
     for (let i = 0; i < 50; i++) {
@@ -1220,25 +1185,16 @@
     return E;
   }
 
-  // Convert eccentric anomaly E → true anomaly θ
-  // Standard: θ=0 at perigee. We offset by π so θ=0 maps to apogee.
   function eccToTrue(E, e) {
     const nu = 2 * Math.atan2(
       Math.sqrt(1 + e) * Math.sin(E / 2),
       Math.sqrt(1 - e) * Math.cos(E / 2)
     );
-    return nu + Math.PI; // shift so 0 = apogee (right vertex)
+    return nu + Math.PI;
   }
 
-  // Map true anomaly θ → SVG (x, y)
-  // θ=0 → right vertex (apogee), going counter-clockwise (upper half first in SVG, which means -y direction)
   function trueToSVG(theta) {
-    // Parametric ellipse: standard angle φ such that:
-    //   x_centre_rel = a·cos(φ),  y_centre_rel = b·sin(φ)
-    // True anomaly θ=0 at right vertex → φ=0.
-    // Counter-clockwise in math coords = clockwise in SVG (y-axis flipped).
-    // To go counter-clockwise visually in SVG (upper arc first) we negate the angle.
-    const phi = -theta;   // θ=0 at apogee (right), increases CCW in math → CW visually in SVG (upper arc first)
+    const phi = -theta;
     const x = cx + a * Math.cos(phi);
     const y = cy + b * Math.sin(phi);
     return { x, y };
@@ -1248,20 +1204,15 @@
 
   function frame(ts) {
     if (!startTime) startTime = ts;
-    const elapsed = (ts - startTime) / 1000;   // seconds
-    const M = ((elapsed % T) / T) * 2 * Math.PI; // mean anomaly 0→2π
-
+    const elapsed = (ts - startTime) / 1000;
+    const M = ((elapsed % T) / T) * 2 * Math.PI;
     const E     = solveKepler(M, ecc);
     const theta = eccToTrue(E, ecc);
     const { x, y } = trueToSVG(theta);
-
     dot.setAttribute('cx', x.toFixed(2));
     dot.setAttribute('cy', y.toFixed(2));
-
-    // Subtle size pulse: slightly larger near apogee (slow), smaller near perigee (fast)
-    const r = 3.5 + 1.5 * (1 + Math.cos(theta)) / 2;  // 3.5 at perigee → 5 at apogee
+    const r = 3.5 + 1.5 * (1 + Math.cos(theta)) / 2;
     dot.setAttribute('r', r.toFixed(2));
-
     requestAnimationFrame(frame);
   }
 
